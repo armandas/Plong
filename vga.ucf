@@ -1,0 +1,6 @@
+NET "hsync" LOC = "F15";
+NET "vsync" LOC = "F14";
+
+NET "rgb<0>" LOC = "G15";
+NET "rgb<1>" LOC = "H15";
+NET "rgb<2>" LOC = "H14";
