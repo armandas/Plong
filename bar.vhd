@@ -2,14 +2,14 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
-entity bar_object is
+entity bar_rom is
     port(
-        addr: in std_logic_vector(20 downto 0);
+        addr: in std_logic_vector(4 downto 0);
         data: out std_logic_vector(4 downto 0)
     );
-end bar_object;
+end bar_rom;
 
-architecture content of bar_object is
+architecture content of bar_rom is
     type rom_type is array(0 to 20) of std_logic_vector(0 to 4);
     constant BAR: rom_type :=
     (
