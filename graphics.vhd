@@ -5,7 +5,7 @@ use ieee.std_logic_unsigned.all;
 entity graphics is
     port(
         clk, reset: in std_logic;
-        gamepad: in std_logic_vector(0 to 1);
+        gamepad: in std_logic_vector(1 downto 0);
         px_x, px_y: in std_logic_vector(9 downto 0);
         video_on: in std_logic;
         rgb_stream: out std_logic_vector(2  downto 0)
