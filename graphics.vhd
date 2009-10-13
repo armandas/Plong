@@ -39,9 +39,9 @@ begin
     process(clk, reset)
     begin
         if reset = '1' then
-            ball_x <= "0100101100";--(others => '0');
-            ball_y <= "0100101100";--(others => '0');
-            bar_y <= "0100101100";--(others => '0');
+            ball_x <= (others => '0');
+            ball_y <= (others => '0');
+            bar_y <= (others => '0');
         elsif clk'event and clk = '0' then
             ball_x <= ball_x_next;
             ball_y <= ball_y_next;
