@@ -2,5 +2,5 @@ NET "clk" LOC = "C9";
 NET "clk" TNM_NET = "clk";
 TIMESPEC "TS_clk" = PERIOD "clk" 20 ns;
 
-NET "gamepad<0>" LOC = "V4";
-NET "gamepad<1>" LOC = "K17";
+NET "gamepad<0>" LOC = "V4" | IOSTANDARD = LVTTL | PULLDOWN;
+NET "gamepad<1>" LOC = "K17" | IOSTANDARD = LVTTL | PULLDOWN;

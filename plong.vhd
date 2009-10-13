@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 entity plong is
     port (
         clk, reset: in std_logic;
-        gamepad: in std_logic_vector(1 downto 0);
+        gamepad: in std_logic_vector(0 to 1);
         hsync, vsync: out  std_logic;
         rgb: out std_logic_vector(2 downto 0)
     );

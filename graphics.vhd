@@ -5,7 +5,7 @@ use ieee.std_logic_unsigned.all;
 entity graphics is
     port(
         clk, reset: in std_logic;
-        gamepad: in std_logic_vector(1 downto 0);
+        gamepad: in std_logic_vector(0 to 1);
         px_x, px_y: in std_logic_vector(9 downto 0);
         video_on: in std_logic;
         rgb_stream: out std_logic_vector(2  downto 0)
@@ -13,6 +13,9 @@ entity graphics is
 end graphics;
 
 architecture dispatcher of graphics is
+    constant SCREEN_WIDTH: integer := 640;
+    constant SCREEN_HEIGHT: integer := 480;
+
     constant BALL_SIZE: integer := 16; -- ball is square
     signal ball_addr: std_logic_vector(3 downto 0);
     signal ball_px_addr: std_logic_vector(3 downto 0);
@@ -49,17 +52,28 @@ begin
     ball_x_next <= ball_x;
     ball_y_next <= ball_y;
     
-    bar_y_next <= bar_y;
+    process(bar_y, px_x, px_y, gamepad)
+    begin
+        bar_y_next <= bar_y;
+
+        if px_x = 0 and px_y = 0 then
+            if gamepad(0) = '1' and bar_y > 0 then
+                bar_y_next <= bar_y - 1;
+            elsif gamepad(1) = '1' and bar_y < SCREEN_HEIGHT - BAR_HEIGHT then
+                bar_y_next <= bar_y + 1;
+            end if;
+        end if;
+    end process;
 
     ball_on <= '1' when px_x >= ball_x and
-                        px_y >= ball_y and
                         px_x < (ball_x + BALL_SIZE) and
+                        px_y >= ball_y and
                         px_y < (ball_y + BALL_SIZE) else
                '0';
 
     bar_on <= '1' when px_x >= BAR_POS and
-                       px_y >= bar_y and
                        px_x < (BAR_POS + BAR_WIDTH) and
+                       px_y >= bar_y and
                        px_y < (bar_y + BAR_HEIGHT) else
               '0';
 

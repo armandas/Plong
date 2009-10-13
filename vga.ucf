@@ -1,6 +1,6 @@
-NET "hsync" LOC = "F15";
-NET "vsync" LOC = "F14";
+NET "hsync" LOC = "F15" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = FAST;
+NET "vsync" LOC = "F14" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = FAST;
 
-NET "rgb<0>" LOC = "G15";
-NET "rgb<1>" LOC = "H15";
-NET "rgb<2>" LOC = "H14";
+NET "rgb<0>" LOC = "G15" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = FAST;
+NET "rgb<1>" LOC = "H15" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = FAST;
+NET "rgb<2>" LOC = "H14" | IOSTANDARD = LVTTL | DRIVE = 8 | SLEW = FAST;
