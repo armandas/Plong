@@ -6,7 +6,7 @@ entity bar_rom is
     port(
         clk: in std_logic;
         addr: in std_logic_vector(6 downto 0);
-        data: out std_logic_vector(19 downto 0)
+        data: out std_logic_vector(0 to 19)
     );
 end bar_rom;
 

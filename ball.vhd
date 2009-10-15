@@ -5,12 +5,12 @@ use ieee.std_logic_unsigned.all;
 entity ball_rom is
     port(
         addr: in std_logic_vector(3 downto 0);
-        data: out std_logic_vector(15 downto 0)
+        data: out std_logic_vector(0 to 15)
     );
 end ball_rom;
 
 architecture content of ball_rom is
-    type rom_type is array(0 to 15) of std_logic_vector(15 downto 0);
+    type rom_type is array(0 to 15) of std_logic_vector(0 to 15);
     constant BALL: rom_type :=
     (
         "0000011111100000",
