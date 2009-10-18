@@ -164,16 +164,44 @@ begin
         bar_2_y_next <= bar_2_y;
         
         if px_x = 0 and px_y = 0 then
-            if gamepad(0) = '1' and bar_1_y > 2 then
-                bar_1_y_next <= bar_1_y - 3;
-            elsif gamepad(1) = '1' and bar_1_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
-                bar_1_y_next <= bar_1_y + 3;
+            if gamepad(0) = '1' then
+                -- if there is enough space
+                if bar_1_y > 2 then
+                    -- just move by standard ammount
+                    bar_1_y_next <= bar_1_y - 3;
+                else
+                    -- otherwise, move to the end
+                    bar_1_y_next <= (others => '0');
+                end if;
+            elsif gamepad(1) = '1' then
+                -- if there is enough space
+                if bar_1_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
+                    -- just move by standard ammount
+                    bar_1_y_next <= bar_1_y + 3;
+                else
+                    -- otherwise, move to the end
+                    bar_1_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BAR_HEIGHT, 10);
+                end if;
             end if;
 
-            if gamepad(2) = '1' and bar_2_y > 2 then
-                bar_2_y_next <= bar_2_y - 3;
-            elsif gamepad(3) = '1' and bar_2_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
-                bar_2_y_next <= bar_2_y + 3;
+            if gamepad(2) = '1' then
+                -- if there is enough space
+                if bar_2_y > 2 then
+                    -- just move by standard ammount
+                    bar_2_y_next <= bar_2_y - 3;
+                else
+                    -- otherwise, move to the end
+                    bar_2_y_next <= (others => '0');
+                end if;
+            elsif gamepad(3) = '1' then
+                -- if there is enough space
+                if bar_2_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
+                    -- just move by standard ammount
+                    bar_2_y_next <= bar_2_y + 3;
+                else
+                    -- otherwise, move to the end
+                    bar_2_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BAR_HEIGHT, 10);
+                end if;
             end if;
         end if;
     end process;
