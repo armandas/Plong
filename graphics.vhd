@@ -36,7 +36,7 @@ architecture dispatcher of graphics is
     signal ball_x, ball_x_next: std_logic_vector(9 downto 0);
     signal ball_y, ball_y_next: std_logic_vector(9 downto 0);
 
-    signal ball_h_dir, ball_v_dir: std_logic;
+    signal ball_h_dir, ball_h_dir_next, ball_v_dir, ball_v_dir_next: std_logic;
     signal ball_h_speed, ball_v_speed: std_logic_vector(3 downto 0) := "0001";
 
     constant BAR_1_POS: integer := 20;
@@ -75,11 +75,11 @@ begin
                 end if;
             when playing =>
                 ball_enable <= '1';
-                if ball_x = 1 then
+                if ball_x = 0 then
                     -- player 2 wins
                     score_2 <= score_2 + 1;
                     state_next <= waiting;
-                elsif ball_x = SCREEN_WIDTH - BALL_SIZE - 2 then
+                elsif ball_x = SCREEN_WIDTH - BALL_SIZE then
                     -- player 1 wins
                     score_1 <= score_1 + 1;
                     state_next <= waiting;
@@ -97,49 +97,63 @@ begin
             state <= start;
             ball_x <= (others => '0');
             ball_y <= (others => '0');
-            bar_1_y <= "0010110000";--(others => '0');
-            bar_2_y <= "0010110000";--(others => '0');
+            bar_1_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2, 10);
+            bar_2_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2, 10);
+            ball_h_dir <= '0';
+            ball_v_dir <= '0';
         elsif clk'event and clk = '0' then
             state <= state_next;
             ball_x <= ball_x_next;
             ball_y <= ball_y_next;
             bar_1_y <= bar_1_y_next;
             bar_2_y <= bar_2_y_next;
+            ball_h_dir <= ball_h_dir_next;
+            ball_v_dir <= ball_v_dir_next;
         end if;
     end process;
 
-    process(
+    direction_control: process(
+        px_x, px_y,
+        ball_x, ball_y,
+        ball_h_dir, ball_v_dir,
+        ball_h_dir_next, ball_v_dir_next,
+        bar_1_y, bar_2_y
+    )
+    begin
+        ball_h_dir_next <= ball_h_dir;
+        ball_v_dir_next <= ball_v_dir;
+
+        if px_x = 0 and px_y = 0 then
+            if ball_x = BAR_1_POS + BAR_WIDTH and
+               ball_y >= bar_1_y and ball_y < bar_1_y + BAR_HEIGHT then
+                ball_h_dir_next <= '1';
+            elsif ball_x = BAR_2_POS - BALL_SIZE and
+                  ball_y >= bar_2_y and ball_y < bar_2_y + BAR_HEIGHT then
+                ball_h_dir_next <= '0';
+            end if;
+            
+            if ball_y = 0 then
+                ball_v_dir_next <= '1';
+            elsif ball_y = SCREEN_HEIGHT - BALL_SIZE - 1 then
+                ball_v_dir_next <= '0';
+            end if;
+        end if;
+    end process;
+
+    ball_control: process(
         px_x, px_y,
         ball_x, ball_y,
         ball_x_next, ball_y_next,
         ball_h_dir, ball_v_dir,
         ball_h_speed, ball_v_speed,
-        ball_enable,
-        bar_1_y, bar_2_y
+        ball_enable
     )
     begin
         ball_x_next <= ball_x;
         ball_y_next <= ball_y;
-        --ball_h_dir <= '0';
-        --ball_v_dir <= '0';
 
         if ball_enable = '1' then
             if px_x = 0 and px_y = 0 then
-
-                if ball_x_next = BAR_1_POS + BAR_WIDTH and
-                   ball_y_next >= bar_1_y and ball_y_next < bar_1_y + BAR_HEIGHT then
-                    ball_h_dir <= '1';
-                elsif ball_x_next = BAR_2_POS - BALL_SIZE and
-                      ball_y_next >= bar_2_y and ball_y_next < bar_2_y + BAR_HEIGHT then
-                    ball_h_dir <= '0';
-                end if;
-                
-                if ball_y_next = 0 then
-                    ball_v_dir <= '1';
-                elsif ball_y_next = SCREEN_HEIGHT - BALL_SIZE - 1 then
-                    ball_v_dir <= '0';
-                end if;
-
                 if ball_h_dir = '1' then
                     ball_x_next <= ball_x + ball_h_speed;
                 else
@@ -158,7 +172,7 @@ begin
         end if;
     end process;
 
-    process(bar_1_y, bar_2_y, px_x, px_y, gamepad)
+    bar_control: process(bar_1_y, bar_2_y, px_x, px_y, gamepad)
     begin
         bar_1_y_next <= bar_1_y;
         bar_2_y_next <= bar_2_y;
