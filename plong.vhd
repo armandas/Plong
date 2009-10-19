@@ -28,7 +28,7 @@ begin
         port map(
             clk => clk, reset => reset,
             hsync => hsync, vsync => vsync,
-            video_on => video_on, p_tick => open,
+            video_on => video_on,
             pixel_x => px_x, pixel_y => px_y
         );
 

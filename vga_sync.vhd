@@ -6,7 +6,7 @@ entity vga is
     port(
         clk, reset: in std_logic;
         hsync, vsync: out std_logic;
-        video_on, p_tick: out std_logic;
+        video_on: out std_logic;
         pixel_x, pixel_y: out std_logic_vector (9 downto 0)
     );
 end vga;
@@ -107,5 +107,4 @@ begin
     vsync <= v_sync;
     pixel_x <= h_count;
     pixel_y <= v_count;
-    p_tick <= pixel_tick;
 end sync;
