@@ -9,7 +9,9 @@ entity graphics is
         gamepad: in std_logic_vector(3 downto 0);
         px_x, px_y: in std_logic_vector(9 downto 0);
         video_on: in std_logic;
-        rgb_stream: out std_logic_vector(2  downto 0)
+        rgb_stream: out std_logic_vector(2  downto 0);
+        ball_bounced: out std_logic;
+        ball_missed: out std_logic;
     );
 end graphics;
 
@@ -37,7 +39,13 @@ architecture dispatcher of graphics is
     signal ball_y, ball_y_next: std_logic_vector(9 downto 0);
 
     signal ball_h_dir, ball_h_dir_next, ball_v_dir, ball_v_dir_next: std_logic;
-    signal ball_h_speed, ball_v_speed: std_logic_vector(3 downto 0) := "0001";
+    signal ball_speed, ball_speed_next: std_logic_vector(2 downto 0);
+
+    signal ball_bounce, ball_miss: std_logic;
+
+    -- counts how many times the ball hits the bar
+    -- used to determine ball speed
+    signal bounce_counter, bounce_counter_next: std_logic_vector(3 downto 0);
 
     constant BAR_1_POS: integer := 20;
     constant BAR_2_POS: integer := 600;
@@ -60,6 +68,7 @@ begin
     begin
         state_next <= state;
         ball_enable <= '0';
+        ball_miss <= '0';
 
         case state is
             when start =>
@@ -79,10 +88,12 @@ begin
                     -- player 2 wins
                     score_2 <= score_2 + 1;
                     state_next <= waiting;
+                    ball_miss <= '1';
                 elsif ball_x = SCREEN_WIDTH - BALL_SIZE then
                     -- player 1 wins
                     score_1 <= score_1 + 1;
                     state_next <= waiting;
+                    ball_miss <= '1';
                 end if;
             when game_over =>
                 if gamepad > 0 then
@@ -97,10 +108,12 @@ begin
             state <= start;
             ball_x <= (others => '0');
             ball_y <= (others => '0');
-            bar_1_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2, 10);
-            bar_2_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2, 10);
+            bar_1_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2 - BAR_HEIGHT / 2, 10);
+            bar_2_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2 - BAR_HEIGHT / 2, 10);
             ball_h_dir <= '0';
             ball_v_dir <= '0';
+            ball_speed <= "001";
+            bounce_counter <= "0001";
         elsif clk'event and clk = '0' then
             state <= state_next;
             ball_x <= ball_x_next;
@@ -109,6 +122,8 @@ begin
             bar_2_y <= bar_2_y_next;
             ball_h_dir <= ball_h_dir_next;
             ball_v_dir <= ball_v_dir_next;
+            ball_speed <= ball_speed_next;
+            bounce_counter <= bounce_counter_next;
         end if;
     end process;
 
@@ -122,14 +137,17 @@ begin
     begin
         ball_h_dir_next <= ball_h_dir;
         ball_v_dir_next <= ball_v_dir;
+        ball_bounce <= '0';
 
         if px_x = 0 and px_y = 0 then
             if ball_x = BAR_1_POS + BAR_WIDTH and
                ball_y >= bar_1_y and ball_y < bar_1_y + BAR_HEIGHT then
                 ball_h_dir_next <= '1';
+                ball_bounce <= '1';
             elsif ball_x = BAR_2_POS - BALL_SIZE and
                   ball_y >= bar_2_y and ball_y < bar_2_y + BAR_HEIGHT then
                 ball_h_dir_next <= '0';
+                ball_bounce <= '1';
             end if;
             
             if ball_y = 0 then
@@ -140,12 +158,21 @@ begin
         end if;
     end process;
 
+    bounce_counter_next <= bounce_counter + 1 when ball_bounce = '1' else
+                           "0000" when ball_miss = '1' else
+                           bounce_counter;
+
+    ball_speed_next <= "001" when bounce_counter = 0 else
+                       --"010" when bounce_counter = 3 else
+                       --"011" when bounce_counter = 9 else
+                       ball_speed;
+
     ball_control: process(
         px_x, px_y,
         ball_x, ball_y,
         ball_x_next, ball_y_next,
         ball_h_dir, ball_v_dir,
-        ball_h_speed, ball_v_speed,
+        ball_speed, ball_speed,
         ball_enable
     )
     begin
@@ -155,20 +182,24 @@ begin
         if ball_enable = '1' then
             if px_x = 0 and px_y = 0 then
                 if ball_h_dir = '1' then
-                    ball_x_next <= ball_x + ball_h_speed;
+                    ball_x_next <= ball_x + ball_speed;
                 else
-                    ball_x_next <= ball_x - ball_h_speed;
+                    ball_x_next <= ball_x - ball_speed;
                 end if;
 
                 if ball_v_dir = '1' then
-                    ball_y_next <= ball_y + ball_v_speed;
+                    if ball_y + BALL_SIZE + ball_speed > SCREEN_HEIGHT then
+                        ball_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BALL_SIZE, 10);
+                    else
+                        ball_y_next <= ball_y + ball_speed;
+                    end if;
                 else
-                    ball_y_next <= ball_y - ball_v_speed;
+                    ball_y_next <= ball_y - ball_speed;
                 end if;
             end if;
         else
-            ball_x_next <= conv_std_logic_vector((SCREEN_WIDTH / 2) - (BALL_SIZE / 2), 10);
-            ball_y_next <= conv_std_logic_vector((SCREEN_HEIGHT / 2) - (BALL_SIZE / 2), 10);
+            ball_x_next <= conv_std_logic_vector(SCREEN_WIDTH / 2 - BALL_SIZE / 2, 10);
+            ball_y_next <= conv_std_logic_vector(SCREEN_HEIGHT / 2 - BALL_SIZE / 2, 10);
         end if;
     end process;
 
@@ -283,5 +314,8 @@ begin
     bar_unit:
         entity work.bar_rom(content)
         port map(clk => clk, addr => bar_addr, data => bar_data);
+
+    ball_bounced <= ball_bounce;
+    ball_missed <= ball_miss;
 
 end dispatcher;
