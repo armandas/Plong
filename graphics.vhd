@@ -11,7 +11,7 @@ entity graphics is
         video_on: in std_logic;
         rgb_stream: out std_logic_vector(2  downto 0);
         ball_bounced: out std_logic;
-        ball_missed: out std_logic;
+        ball_missed: out std_logic
     );
 end graphics;
 
@@ -21,6 +21,23 @@ architecture dispatcher of graphics is
 
     type game_states is (start, waiting, playing, game_over);
     signal state, state_next: game_states;
+
+    type counter_storage is array(0 to 4) of std_logic_vector(18 downto 0);
+    constant COUNTER_VALUES: counter_storage :=
+    (
+        "1000011110100010010", -- 277778
+        "0110010110111001101", -- 208333
+        "0101000101100001011", -- 166667
+        "0100001111010001001", -- 138889
+        "0011101000100001000"  -- 119048
+    );
+    -- counters to determine ball control frequency
+    signal b_c_counter, b_c_counter_next: std_logic_vector(18 downto 0);
+    signal b_c_value: integer;
+
+    -- counts how many times the ball hits the bar
+    -- used to determine ball speed
+    signal bounce_counter, bounce_counter_next: std_logic_vector(7 downto 0);
 
     signal score_1, score_2: std_logic_vector(2 downto 0);
 
@@ -39,22 +56,17 @@ architecture dispatcher of graphics is
     signal ball_y, ball_y_next: std_logic_vector(9 downto 0);
 
     signal ball_h_dir, ball_h_dir_next, ball_v_dir, ball_v_dir_next: std_logic;
-    signal ball_speed, ball_speed_next: std_logic_vector(2 downto 0);
 
     signal ball_bounce, ball_miss: std_logic;
-
-    -- counts how many times the ball hits the bar
-    -- used to determine ball speed
-    signal bounce_counter, bounce_counter_next: std_logic_vector(3 downto 0);
 
     constant BAR_1_POS: integer := 20;
     constant BAR_2_POS: integer := 600;
 
     constant BAR_WIDTH: integer := 20;
-    constant BAR_HEIGHT: integer := 128;
+    constant BAR_HEIGHT: integer := 64;
 
     signal bar_pos: integer;
-    signal bar_addr: std_logic_vector(6 downto 0);
+    signal bar_addr: std_logic_vector(5 downto 0);
     signal bar_data: std_logic_vector(0 to BAR_WIDTH - 1);
     signal bar_pixel: std_logic;
     signal bar_rgb: std_logic_vector(2 downto 0);
@@ -112,8 +124,8 @@ begin
             bar_2_y <= conv_std_logic_vector(SCREEN_HEIGHT / 2 - BAR_HEIGHT / 2, 10);
             ball_h_dir <= '0';
             ball_v_dir <= '0';
-            ball_speed <= "001";
-            bounce_counter <= "0001";
+            bounce_counter <= (others => '0');
+            b_c_counter <= (others => '0');
         elsif clk'event and clk = '0' then
             state <= state_next;
             ball_x <= ball_x_next;
@@ -122,8 +134,8 @@ begin
             bar_2_y <= bar_2_y_next;
             ball_h_dir <= ball_h_dir_next;
             ball_v_dir <= ball_v_dir_next;
-            ball_speed <= ball_speed_next;
             bounce_counter <= bounce_counter_next;
+            b_c_counter <= b_c_counter_next;
         end if;
     end process;
 
@@ -139,7 +151,12 @@ begin
         ball_v_dir_next <= ball_v_dir;
         ball_bounce <= '0';
 
-        if px_x = 0 and px_y = 0 then
+        --
+        -- BEWARE! Looks like ball_bounce signal is generated twice
+        -- due to slower clock! Too lazy to fix now :D
+        --
+
+        if b_c_counter = 0 then
             if ball_x = BAR_1_POS + BAR_WIDTH and
                ball_y >= bar_1_y and ball_y < bar_1_y + BAR_HEIGHT then
                 ball_h_dir_next <= '1';
@@ -152,27 +169,30 @@ begin
             
             if ball_y = 0 then
                 ball_v_dir_next <= '1';
-            elsif ball_y = SCREEN_HEIGHT - BALL_SIZE - 1 then
+            elsif ball_y = SCREEN_HEIGHT - BALL_SIZE then
                 ball_v_dir_next <= '0';
             end if;
         end if;
     end process;
 
-    bounce_counter_next <= bounce_counter + 1 when ball_bounce = '1' else
-                           "0000" when ball_miss = '1' else
-                           bounce_counter;
+    b_c_value <= 0 when bounce_counter < 4 else
+                 1 when bounce_counter < 15 else
+                 2 when bounce_counter < 25 else
+                 3 when bounce_counter < 35 else
+                 4;
 
-    ball_speed_next <= "001" when bounce_counter = 0 else
-                       --"010" when bounce_counter = 3 else
-                       --"011" when bounce_counter = 9 else
-                       ball_speed;
+    b_c_counter_next <= b_c_counter + 1 when b_c_counter < COUNTER_VALUES(b_c_value) else
+                        (others => '0');
+
+    bounce_counter_next <= bounce_counter + 1 when ball_bounce = '1' else
+                           (others => '0') when ball_miss = '1' else
+                           bounce_counter;
 
     ball_control: process(
         px_x, px_y,
         ball_x, ball_y,
         ball_x_next, ball_y_next,
         ball_h_dir, ball_v_dir,
-        ball_speed, ball_speed,
         ball_enable
     )
     begin
@@ -180,21 +200,17 @@ begin
         ball_y_next <= ball_y;
 
         if ball_enable = '1' then
-            if px_x = 0 and px_y = 0 then
+            if b_c_counter = 0 then
                 if ball_h_dir = '1' then
-                    ball_x_next <= ball_x + ball_speed;
+                    ball_x_next <= ball_x + 1;
                 else
-                    ball_x_next <= ball_x - ball_speed;
+                    ball_x_next <= ball_x - 1;
                 end if;
 
                 if ball_v_dir = '1' then
-                    if ball_y + BALL_SIZE + ball_speed > SCREEN_HEIGHT then
-                        ball_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BALL_SIZE, 10);
-                    else
-                        ball_y_next <= ball_y + ball_speed;
-                    end if;
+                    ball_y_next <= ball_y + 1;
                 else
-                    ball_y_next <= ball_y - ball_speed;
+                    ball_y_next <= ball_y - 1;
                 end if;
             end if;
         else

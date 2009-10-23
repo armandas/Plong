@@ -7,6 +7,7 @@ entity plong is
         gamepad: in std_logic_vector(3 downto 0);
         hsync, vsync: out  std_logic;
         rgb: out std_logic_vector(2 downto 0);
+        led: out std_logic_vector(7 downto 0);
         speaker: out std_logic
     );
 end plong;
@@ -44,7 +45,7 @@ begin
             video_on => video_on,
             rgb_stream => rgb_next,
             ball_bounced => ball_bounced,
-            ball_missed => ball_missed,
+            ball_missed => ball_missed
         );
 
     sound_unit:

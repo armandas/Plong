@@ -30,7 +30,7 @@ begin
         end if;
     end process;
 
-    process(state, delay, ball_bounced, ball_missed, gameover)
+    process(state, delay, ball_bounced, ball_missed)
     begin
         state_next <= state;
 
