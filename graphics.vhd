@@ -22,17 +22,16 @@ architecture dispatcher of graphics is
     type game_states is (start, waiting, playing, game_over);
     signal state, state_next: game_states;
 
-    type counter_storage is array(0 to 4) of std_logic_vector(18 downto 0);
+    type counter_storage is array(0 to 3) of std_logic_vector(17 downto 0);
     constant COUNTER_VALUES: counter_storage :=
     (
-        "1000011110100010010", -- 277778
-        "0110010110111001101", -- 208333
-        "0101000101100001011", -- 166667
-        "0100001111010001001", -- 138889
-        "0011101000100001000"  -- 119048
+        "110010110111001101", -- 208333
+        "101000101100001011", -- 166667
+        "100001111010001001", -- 138889
+        "011101000100001000"  -- 119048
     );
     -- counters to determine ball control frequency
-    signal b_c_counter, b_c_counter_next: std_logic_vector(18 downto 0);
+    signal b_c_counter, b_c_counter_next: std_logic_vector(17 downto 0);
     signal b_c_value: integer;
 
     -- counts how many times the ball hits the bar
@@ -175,18 +174,17 @@ begin
         end if;
     end process;
 
-    b_c_value <= 0 when bounce_counter < 4 else
-                 1 when bounce_counter < 15 else
-                 2 when bounce_counter < 25 else
-                 3 when bounce_counter < 35 else
-                 4;
-
-    b_c_counter_next <= b_c_counter + 1 when b_c_counter < COUNTER_VALUES(b_c_value) else
-                        (others => '0');
-
     bounce_counter_next <= bounce_counter + 1 when ball_bounce = '1' else
                            (others => '0') when ball_miss = '1' else
                            bounce_counter;
+
+    b_c_value <= 0 when bounce_counter < 4 else
+                 1 when bounce_counter < 15 else
+                 2 when bounce_counter < 25 else
+                 3;
+
+    b_c_counter_next <= b_c_counter + 1 when b_c_counter < COUNTER_VALUES(b_c_value) else
+                        (others => '0');
 
     ball_control: process(
         px_x, px_y,
