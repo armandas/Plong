@@ -5,10 +5,10 @@ use ieee.std_logic_unsigned.all;
 
 entity graphics is
     port(
-        clk, reset: in std_logic;
-        gamepad: in std_logic_vector(3 downto 0);
-        px_x, px_y: in std_logic_vector(9 downto 0);
-        video_on: in std_logic;
+        clk, reset: in  std_logic;
+        gamepad: in  std_logic_vector(3 downto 0);
+        px_x, px_y: in  std_logic_vector(9 downto 0);
+        video_on: in  std_logic;
         rgb_stream: out std_logic_vector(2  downto 0);
         ball_bounced: out std_logic;
         ball_missed: out std_logic
@@ -38,11 +38,19 @@ architecture dispatcher of graphics is
     -- used to determine ball speed
     signal bounce_counter, bounce_counter_next: std_logic_vector(7 downto 0);
 
-    signal score_1, score_2: std_logic_vector(2 downto 0);
+    signal score_on: std_logic;
+    signal current_score: std_logic_vector(5 downto 0);
+    signal score_1, score_1_next: std_logic_vector(5 downto 0);
+    signal score_2, score_2_next: std_logic_vector(5 downto 0);
 
     constant MIDDLE_LINE_POS: integer := SCREEN_WIDTH / 2;
     signal middle_line_on: std_logic;
     signal middle_line_rgb: std_logic_vector(2 downto 0);
+
+    signal font_addr: std_logic_vector(8 downto 0);
+    signal font_data: std_logic_vector(0 to 7);
+    signal font_pixel: std_logic;
+    signal font_rgb: std_logic_vector(2 downto 0);
 
     constant BALL_SIZE: integer := 16; -- ball is square
     signal ball_enable: std_logic;
@@ -75,16 +83,18 @@ architecture dispatcher of graphics is
     signal ball_on, bar_on: std_logic;
 begin
 
-    process(state, ball_x, gamepad)
+    process(state, ball_x, gamepad, score_1, score_2)
     begin
         state_next <= state;
         ball_enable <= '0';
         ball_miss <= '0';
+        score_1_next <= score_1;
+        score_2_next <= score_2;
 
         case state is
             when start =>
-                score_1 <= (others => '0');
-                score_2 <= (others => '0');
+                score_1_next <= (others => '0');
+                score_2_next <= (others => '0');
                 state_next <= waiting;
             when waiting =>
                 ball_enable <= '0';
@@ -97,18 +107,18 @@ begin
                 ball_enable <= '1';
                 if ball_x = 0 then
                     -- player 2 wins
-                    score_2 <= score_2 + 1;
+                    score_2_next <= score_2 + 1;
                     state_next <= waiting;
                     ball_miss <= '1';
                 elsif ball_x = SCREEN_WIDTH - BALL_SIZE then
                     -- player 1 wins
-                    score_1 <= score_1 + 1;
+                    score_1_next <= score_1 + 1;
                     state_next <= waiting;
                     ball_miss <= '1';
                 end if;
             when game_over =>
                 if gamepad > 0 then
-                    state_next <= waiting;
+                    state_next <= start;
                 end if;
         end case;
     end process;
@@ -135,11 +145,26 @@ begin
             ball_v_dir <= ball_v_dir_next;
             bounce_counter <= bounce_counter_next;
             b_c_counter <= b_c_counter_next;
+            score_1 <= score_1_next;
+            score_2 <= score_2_next;
         end if;
     end process;
 
+    score_on <= '1' when (px_x(9 downto 3) = 37 and px_y(9 downto 3) = 1) or
+                         (px_x(9 downto 3) = 42 and px_y(9 downto 3) = 1) else
+                '0';
+
+    current_score <= score_1 when px_x < 320 else score_2;
+    -- numbers start at memory location 128
+    -- '1' starts at 136, '2' at 144 and so on
+    font_addr <= conv_std_logic_vector(128, 9) +
+                 (current_score(2 downto 0) & current_score(5 downto 3)) +
+                 px_y(2 downto 0);
+    font_pixel <= font_data(conv_integer(px_x(2 downto 0)));
+    font_rgb <= "000" when font_pixel = '1' else "111";
+
     direction_control: process(
-        px_x, px_y,
+        b_c_counter,
         ball_x, ball_y,
         ball_h_dir, ball_v_dir,
         ball_h_dir_next, ball_v_dir_next,
@@ -187,7 +212,7 @@ begin
                         (others => '0');
 
     ball_control: process(
-        px_x, px_y,
+        b_c_counter,
         ball_x, ball_y,
         ball_x_next, ball_y_next,
         ball_h_dir, ball_v_dir,
@@ -291,8 +316,8 @@ begin
     ball_rgb <= "000" when ball_pixel = '1' else "111";
 
 
-    bar_addr <= (px_y(6 downto 0) - bar_1_y(6 downto 0)) when px_x < 320 else
-                (px_y(6 downto 0) - bar_2_y(6 downto 0));
+    bar_addr <= (px_y(5 downto 0) - bar_1_y(5 downto 0)) when px_x < 320 else
+                (px_y(5 downto 0) - bar_2_y(5 downto 0));
     bar_pos <= BAR_1_POS when px_x < 320 else BAR_2_POS;
     bar_pixel <= bar_data(conv_integer(px_x - bar_pos));
     bar_rgb <= "000" when bar_pixel = '1' else "111";
@@ -300,6 +325,7 @@ begin
     process(
         ball_on, bar_on,
         ball_rgb, bar_rgb,
+        score_on, font_rgb,
         middle_line_on, middle_line_rgb,
         video_on
     )
@@ -311,6 +337,8 @@ begin
                 rgb_stream <= ball_rgb;
             elsif middle_line_on = '1' then
                 rgb_stream <= middle_line_rgb;
+            elsif score_on = '1' then
+                rgb_stream <= font_rgb;
             else
                 -- background is white
                 rgb_stream <= "111";
@@ -328,6 +356,10 @@ begin
     bar_unit:
         entity work.bar_rom(content)
         port map(clk => clk, addr => bar_addr, data => bar_data);
+
+    font_unit:
+        entity work.codepage_rom(content)
+        port map(clk => clk, addr => font_addr, data => font_data);
 
     ball_bounced <= ball_bounce;
     ball_missed <= ball_miss;

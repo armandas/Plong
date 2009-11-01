@@ -7,7 +7,6 @@ entity plong is
         gamepad: in std_logic_vector(3 downto 0);
         hsync, vsync: out  std_logic;
         rgb: out std_logic_vector(2 downto 0);
-        led: out std_logic_vector(7 downto 0);
         speaker: out std_logic
     );
 end plong;
@@ -17,7 +16,6 @@ architecture arch of plong is
     signal video_on: std_logic;
     signal px_x, px_y: std_logic_vector(9 downto 0);
     signal ball_bounced, ball_missed: std_logic;
-    signal pitch: std_logic_vector(3 downto 0);
 begin
     process (clk, reset)
     begin

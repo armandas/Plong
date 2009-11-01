@@ -17,7 +17,7 @@ begin
     -- MSBs are used to determine the o/p frequency
     limit <= pitch & "111111111111111";
 
-    process(clk)
+    process(clk, reset)
     begin
         if reset = '1' then
             counter <= (others => '0');
