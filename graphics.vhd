@@ -98,7 +98,7 @@ begin
                 state_next <= waiting;
             when waiting =>
                 ball_enable <= '0';
-                if (score_1 + score_2) = 5 then
+                if score_1 = 7 or score_2 = 7 then
                     state_next <= game_over;
                 elsif gamepad > 0 then
                     state_next <= playing;
@@ -135,6 +135,8 @@ begin
             ball_v_dir <= '0';
             bounce_counter <= (others => '0');
             b_c_counter <= (others => '0');
+            score_1 <= (others => '0');
+            score_2 <= (others => '0');
         elsif clk'event and clk = '0' then
             state <= state_next;
             ball_x <= ball_x_next;
