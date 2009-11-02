@@ -17,40 +17,50 @@ architecture arch of plong_sounds is
     signal state, state_next: sound_states;
 
     signal enable: std_logic;
-    signal pitch: std_logic_vector(3 downto 0);
-    signal delay: std_logic_vector(23 downto 0);
+    signal pitch, pitch_next: std_logic_vector(3 downto 0);
+    signal tone_length, tone_length_next: std_logic_vector(23 downto 0);
     signal counter, counter_next: std_logic_vector(23 downto 0);
 begin
 
     process(clk, reset)
     begin
-        if clk'event and clk = '0' then
+        if reset = '1' then
+            counter <= (others => '0');
+            tone_length <= (others => '0');
+            pitch <= (others => '0');
+            state <= off;
+        elsif clk'event and clk = '0' then
             counter <= counter_next;
+            tone_length <= tone_length_next;
             state <= state_next;
+            pitch <= pitch_next;
         end if;
     end process;
 
-    process(state, counter, delay, ball_bounced, ball_missed)
+    process(state, counter, tone_length, ball_bounced, ball_missed, pitch)
     begin
         state_next <= state;
+        counter_next <= counter;
+        tone_length_next <= tone_length;
+        pitch_next <= pitch;
 
         case state is
             when off =>
                 if ball_bounced = '1' then
                     state_next <= playing;
-                    -- short delay
-                    delay <= conv_std_logic_vector(2000000, 24);
+                    -- short tone_length
+                    tone_length_next <= conv_std_logic_vector(2000000, 24);
                     -- high pitch
-                    pitch <= "0000";
+                    pitch_next <= "0000";
                 elsif ball_missed = '1' then
                     state_next <= playing;
-                    -- long delay
-                    delay <= (others => '1');
+                    -- long tone_length
+                    tone_length_next <= (others => '1');
                     -- low pitch
-                    pitch <= "1111";
+                    pitch_next <= "1111";
                 end if;
             when playing =>
-                if counter < delay then
+                if counter < tone_length then
                     counter_next <= counter + 1;
                 else
                     state_next <= off;
