@@ -38,14 +38,21 @@ architecture dispatcher of graphics is
     -- used to determine ball speed
     signal bounce_counter, bounce_counter_next: std_logic_vector(7 downto 0);
 
-    signal score_on: std_logic;
-    signal current_score: std_logic_vector(5 downto 0);
-    signal score_1, score_1_next: std_logic_vector(5 downto 0);
-    signal score_2, score_2_next: std_logic_vector(5 downto 0);
-
     constant MIDDLE_LINE_POS: integer := SCREEN_WIDTH / 2;
     signal middle_line_on: std_logic;
     signal middle_line_rgb: std_logic_vector(2 downto 0);
+
+    signal score_1, score_1_next: std_logic_vector(5 downto 0);
+    signal score_2, score_2_next: std_logic_vector(5 downto 0);
+
+    signal score_on: std_logic;
+    signal current_score: std_logic_vector(5 downto 0);
+    signal score_font_addr: std_logic_vector(8 downto 0);
+
+    -- message format is "PLAYER p WINS!"
+    -- where p is replaced by player_id
+    signal message_on, player_id_on: std_logic;
+    signal message_font_addr, player_id_font_addr: std_logic_vector(8 downto 0);
 
     signal font_addr: std_logic_vector(8 downto 0);
     signal font_data: std_logic_vector(0 to 7);
@@ -117,9 +124,9 @@ begin
                     ball_miss <= '1';
                 end if;
             when game_over =>
-                if gamepad > 0 then
-                    state_next <= start;
-                end if;
+                --if gamepad > 0 then
+                --    state_next <= start;
+                --end if;
         end case;
     end process;
 
@@ -152,16 +159,52 @@ begin
         end if;
     end process;
 
-    score_on <= '1' when (px_x(9 downto 3) = 37 and px_y(9 downto 3) = 1) or
-                         (px_x(9 downto 3) = 42 and px_y(9 downto 3) = 1) else
+    score_on <= '1' when px_y(9 downto 3) = 1 and
+                         (px_x(9 downto 3) = 42 or px_x(9 downto 3) = 37) else
                 '0';
-
     current_score <= score_1 when px_x < 320 else score_2;
     -- numbers start at memory location 128
     -- '1' starts at 136, '2' at 144 and so on
-    font_addr <= conv_std_logic_vector(128, 9) +
-                 (current_score(2 downto 0) & current_score(5 downto 3)) +
-                 px_y(2 downto 0);
+    score_font_addr <= conv_std_logic_vector(128, 9) +
+                       (current_score(2 downto 0) & current_score(5 downto 3));
+
+    player_id_on <= '1' when state = game_over and px_y(9 downto 3) = 29 and
+                             (px_x(9 downto 3) = 19 or px_x(9 downto 3) = 59) else
+                    '0';
+    -- player_id will display either 1 or 2
+    player_id_font_addr <= "010001000" when px_x < 320 else "010010000";
+
+    message_on <= '1' when state = game_over and
+                           -- message on player_1's side
+                           ((score_1 > score_2 and
+                             px_x(9 downto 3) >= 12 and
+                             px_x(9 downto 3) < 26 and
+                             px_y(9 downto 3) = 29) or
+                           -- message on player_2's side
+                            (score_2 > score_1 and
+                             px_x(9 downto 3) >= 52 and
+                             px_x(9 downto 3) < 66 and
+                             px_y(9 downto 3) = 29)) else
+                  '0';
+    with px_x(9 downto 3) select
+        message_font_addr <= "110000000" when "0110100"|"0001100", -- P
+                             "101100000" when "0110101"|"0001101", -- L
+                             "100001000" when "0110110"|"0001110", -- A
+                             "111001000" when "0110111"|"0001111", -- Y
+                             "100101000" when "0111000"|"0010000", -- E
+                             "110010000" when "0111001"|"0010001", -- R
+                             "111100000" when "0111011"|"0010011", -- not visible
+                             "110111000" when "0111101"|"0010101", -- W
+                             "101111000" when "0111110"|"0010110", -- O
+                             "101110000" when "0111111"|"0010111", -- N
+                             "000001000" when "1000000"|"0011000", -- !
+                             "000000000" when others;
+
+    -- font address mutltiplexer
+    font_addr <= px_y(2 downto 0) + score_font_addr when score_on = '1' else
+                 px_y(2 downto 0) + player_id_font_addr when player_id_on = '1' else
+                 px_y(2 downto 0) + message_font_addr when message_on = '1' else
+                 (others => '0');
     font_pixel <= font_data(conv_integer(px_x(2 downto 0)));
     font_rgb <= "000" when font_pixel = '1' else "111";
 
@@ -327,7 +370,7 @@ begin
     process(
         ball_on, bar_on,
         ball_rgb, bar_rgb,
-        score_on, font_rgb,
+        score_on, message_on, font_rgb,
         middle_line_on, middle_line_rgb,
         video_on
     )
@@ -339,7 +382,8 @@ begin
                 rgb_stream <= ball_rgb;
             elsif middle_line_on = '1' then
                 rgb_stream <= middle_line_rgb;
-            elsif score_on = '1' then
+            -- scores and messages share rgb stream
+            elsif score_on = '1' or message_on = '1' then
                 rgb_stream <= font_rgb;
             else
                 -- background is white
