@@ -1,1 +1,4 @@
-Simple pong implementation in vhdl
+Simple pong implementation in vhdl.
+
+For fully working source, use v1.0 tagged files. Later commits are not
+guaranteed to work.
