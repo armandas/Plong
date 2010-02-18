@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 
 entity vga is
     port(
-        clk, reset: in std_logic;
+        clk, not_reset: in std_logic;
         hsync, vsync: out std_logic;
         video_on: out std_logic;
         pixel_x, pixel_y: out std_logic_vector (9 downto 0)
@@ -36,9 +36,9 @@ architecture sync of vga is
     -- status signal
     signal h_end, v_end, pixel_tick: std_logic;
 begin
-    process(clk, reset)
+    process(clk, not_reset)
     begin
-        if reset = '1' then
+        if not_reset = '0' then
             mod2 <= '0';
             v_count <= (others => '0');
             h_count <= (others => '0');

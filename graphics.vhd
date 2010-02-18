@@ -5,8 +5,10 @@ use ieee.std_logic_unsigned.all;
 
 entity graphics is
     port(
-        clk, reset: in  std_logic;
-        gamepad: in  std_logic_vector(3 downto 0);
+        clk, not_reset: in  std_logic;
+        nes1_up, nes1_down: in  std_logic;
+        nes2_up, nes2_down: in  std_logic;
+        nes_start: in  std_logic;
         px_x, px_y: in  std_logic_vector(9 downto 0);
         video_on: in  std_logic;
         rgb_stream: out std_logic_vector(2  downto 0);
@@ -90,7 +92,7 @@ architecture dispatcher of graphics is
     signal ball_on, bar_on: std_logic;
 begin
 
-    process(state, ball_x, gamepad, score_1, score_2)
+    process(state, ball_x, nes_start, score_1, score_2)
     begin
         state_next <= state;
         ball_enable <= '0';
@@ -107,7 +109,7 @@ begin
                 ball_enable <= '0';
                 if score_1 = 7 or score_2 = 7 then
                     state_next <= game_over;
-                elsif gamepad > 0 then
+                elsif nes_start = '1' then
                     state_next <= playing;
                 end if;
             when playing =>
@@ -124,15 +126,15 @@ begin
                     ball_miss <= '1';
                 end if;
             when game_over =>
-                --if gamepad > 0 then
-                --    state_next <= start;
-                --end if;
+                if nes_start = '1' then
+                    state_next <= start;
+                end if;
         end case;
     end process;
 
-    process(clk, reset)
+    process(clk, not_reset)
     begin
-        if reset = '1' then
+        if not_reset = '0' then
             state <= start;
             ball_x <= (others => '0');
             ball_y <= (others => '0');
@@ -287,22 +289,23 @@ begin
         end if;
     end process;
 
-    bar_control: process(bar_1_y, bar_2_y, px_x, px_y, gamepad)
+    bar_control: process(bar_1_y, bar_2_y, px_x, px_y,
+                         nes1_up, nes1_down, nes2_up, nes2_down)
     begin
         bar_1_y_next <= bar_1_y;
         bar_2_y_next <= bar_2_y;
         
         if px_x = 0 and px_y = 0 then
-            if gamepad(0) = '1' then
+            if nes1_up = '1' then
                 -- if there is enough space
-                if bar_1_y > 2 then
+                if bar_1_y > 0 then
                     -- just move by standard ammount
                     bar_1_y_next <= bar_1_y - 3;
                 else
                     -- otherwise, move to the end
                     bar_1_y_next <= (others => '0');
                 end if;
-            elsif gamepad(1) = '1' then
+            elsif nes1_down = '1' then
                 -- if there is enough space
                 if bar_1_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
                     -- just move by standard ammount
@@ -313,7 +316,7 @@ begin
                 end if;
             end if;
 
-            if gamepad(2) = '1' then
+            if nes2_up = '1' then
                 -- if there is enough space
                 if bar_2_y > 2 then
                     -- just move by standard ammount
@@ -322,7 +325,7 @@ begin
                     -- otherwise, move to the end
                     bar_2_y_next <= (others => '0');
                 end if;
-            elsif gamepad(3) = '1' then
+            elsif nes2_down = '1' then
                 -- if there is enough space
                 if bar_2_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
                     -- just move by standard ammount
