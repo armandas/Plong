@@ -32,9 +32,11 @@ architecture dispatcher of graphics is
         "100001111010001001", -- 138889
         "011101000100001000"  -- 119048
     );
+
     -- counters to determine ball control frequency
-    signal b_c_counter, b_c_counter_next: std_logic_vector(17 downto 0);
-    signal b_c_value: integer;
+    signal ball_control_counter,
+           ball_control_counter_next: std_logic_vector(17 downto 0);
+    signal ball_control_value: integer;
 
     -- counts how many times the ball hits the bar
     -- used to determine ball speed
@@ -143,7 +145,7 @@ begin
             ball_h_dir <= '0';
             ball_v_dir <= '0';
             bounce_counter <= (others => '0');
-            b_c_counter <= (others => '0');
+            ball_control_counter <= (others => '0');
             score_1 <= (others => '0');
             score_2 <= (others => '0');
         elsif clk'event and clk = '0' then
@@ -155,7 +157,7 @@ begin
             ball_h_dir <= ball_h_dir_next;
             ball_v_dir <= ball_v_dir_next;
             bounce_counter <= bounce_counter_next;
-            b_c_counter <= b_c_counter_next;
+            ball_control_counter <= ball_control_counter_next;
             score_1 <= score_1_next;
             score_2 <= score_2_next;
         end if;
@@ -211,7 +213,7 @@ begin
     font_rgb <= "000" when font_pixel = '1' else "111";
 
     direction_control: process(
-        b_c_counter,
+        ball_control_counter,
         ball_x, ball_y,
         ball_h_dir, ball_v_dir,
         ball_h_dir_next, ball_v_dir_next,
@@ -227,15 +229,31 @@ begin
         -- due to slower clock! Too lazy to fix now :D
         --
 
-        if b_c_counter = 0 then
-            if ball_x = BAR_1_POS + BAR_WIDTH and
-               ball_y >= bar_1_y and ball_y < bar_1_y + BAR_HEIGHT then
+        if ball_control_counter = 0 then
+            if ball_x = bar_1_pos + BAR_WIDTH and
+               ball_y + BALL_SIZE > bar_1_y and
+               ball_y < bar_1_y + BAR_HEIGHT then
                 ball_h_dir_next <= '1';
                 ball_bounce <= '1';
-            elsif ball_x = BAR_2_POS - BALL_SIZE and
-                  ball_y >= bar_2_y and ball_y < bar_2_y + BAR_HEIGHT then
+            elsif ball_x + BALL_SIZE = bar_2_pos and
+                  ball_y + BALL_SIZE > bar_2_y and
+                  ball_y < bar_2_y + BAR_HEIGHT then
                 ball_h_dir_next <= '0';
                 ball_bounce <= '1';
+            elsif ball_x < bar_1_pos + BAR_WIDTH and
+                  ball_x + BALL_SIZE > bar_1_pos then
+                if ball_y + BALL_SIZE = bar_1_y then
+                    ball_v_dir_next <= '0';
+                elsif ball_y = bar_1_y + BAR_HEIGHT then
+                    ball_v_dir_next <= '1';
+                end if;
+            elsif ball_x + BALL_SIZE > bar_2_pos and
+                  ball_x < bar_2_pos + BAR_WIDTH then
+                if ball_y + BALL_SIZE = bar_2_y then
+                    ball_v_dir_next <= '0';
+                elsif ball_y = bar_2_y + BAR_HEIGHT then
+                    ball_v_dir_next <= '1';
+                end if;
             end if;
             
             if ball_y = 0 then
@@ -250,16 +268,16 @@ begin
                            (others => '0') when ball_miss = '1' else
                            bounce_counter;
 
-    b_c_value <= 0 when bounce_counter < 4 else
+    ball_control_value <= 0 when bounce_counter < 4 else
                  1 when bounce_counter < 15 else
                  2 when bounce_counter < 25 else
                  3;
 
-    b_c_counter_next <= b_c_counter + 1 when b_c_counter < COUNTER_VALUES(b_c_value) else
+    ball_control_counter_next <= ball_control_counter + 1 when ball_control_counter < COUNTER_VALUES(ball_control_value) else
                         (others => '0');
 
     ball_control: process(
-        b_c_counter,
+        ball_control_counter,
         ball_x, ball_y,
         ball_x_next, ball_y_next,
         ball_h_dir, ball_v_dir,
@@ -270,7 +288,7 @@ begin
         ball_y_next <= ball_y;
 
         if ball_enable = '1' then
-            if b_c_counter = 0 then
+            if ball_control_counter = 0 then
                 if ball_h_dir = '1' then
                     ball_x_next <= ball_x + 1;
                 else
@@ -289,51 +307,32 @@ begin
         end if;
     end process;
 
-    bar_control: process(bar_1_y, bar_2_y, px_x, px_y,
-                         nes1_up, nes1_down, nes2_up, nes2_down)
+    bar_control: process(
+        bar_1_y, bar_2_y,
+        nes1_up, nes1_down,
+        nes2_up, nes2_down
+    )
     begin
         bar_1_y_next <= bar_1_y;
         bar_2_y_next <= bar_2_y;
         
-        if px_x = 0 and px_y = 0 then
-            if nes1_up = '1' then
-                -- if there is enough space
-                if bar_1_y > 0 then
-                    -- just move by standard ammount
-                    bar_1_y_next <= bar_1_y - 3;
-                else
-                    -- otherwise, move to the end
-                    bar_1_y_next <= (others => '0');
-                end if;
-            elsif nes1_down = '1' then
-                -- if there is enough space
-                if bar_1_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
-                    -- just move by standard ammount
-                    bar_1_y_next <= bar_1_y + 3;
-                else
-                    -- otherwise, move to the end
-                    bar_1_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BAR_HEIGHT, 10);
-                end if;
+        if nes1_up = '1' then
+            if bar_1_y > 0 then
+                bar_1_y_next <= bar_1_y - 1;
             end if;
+        elsif nes1_down = '1' then
+            if bar_1_y < SCREEN_HEIGHT - BAR_HEIGHT - 1 then
+                bar_1_y_next <= bar_1_y + 1;
+            end if;
+        end if;
 
-            if nes2_up = '1' then
-                -- if there is enough space
-                if bar_2_y > 2 then
-                    -- just move by standard ammount
-                    bar_2_y_next <= bar_2_y - 3;
-                else
-                    -- otherwise, move to the end
-                    bar_2_y_next <= (others => '0');
-                end if;
-            elsif nes2_down = '1' then
-                -- if there is enough space
-                if bar_2_y < SCREEN_HEIGHT - BAR_HEIGHT - 2 then
-                    -- just move by standard ammount
-                    bar_2_y_next <= bar_2_y + 3;
-                else
-                    -- otherwise, move to the end
-                    bar_2_y_next <= conv_std_logic_vector(SCREEN_HEIGHT - BAR_HEIGHT, 10);
-                end if;
+        if nes2_up = '1' then
+            if bar_2_y > 0 then
+                bar_2_y_next <= bar_2_y - 1;
+            end if;
+        elsif nes2_down = '1' then
+            if bar_2_y < SCREEN_HEIGHT - BAR_HEIGHT - 1 then
+                bar_2_y_next <= bar_2_y + 1;
             end if;
         end if;
     end process;
