@@ -1,0 +1,1 @@
+NET "speaker" LOC = "E7" | IOSTANDARD = LVTTL | SLEW = SLOW | DRIVE = 8;

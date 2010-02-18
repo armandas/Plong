@@ -1,0 +1,4 @@
+NET "clk_out"    LOC = "D7" | IOSTANDARD = LVTTL | SLEW = FAST | DRIVE = 4;
+NET "ps_control" LOC = "F8" | IOSTANDARD = LVTTL | SLEW = FAST | DRIVE = 4;
+NET "data_1" LOC = "B4" | IOSTANDARD = LVCMOS33 | PULLUP;
+NET "data_2" LOC = "D5" | IOSTANDARD = LVCMOS33 | PULLUP;
