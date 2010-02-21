@@ -4,13 +4,13 @@ use ieee.std_logic_1164.all;
 entity plong is
     port (
         clk, not_reset: in std_logic;
-        data_1: in std_logic;
-        data_2: in std_logic;
+        nes_data_1: in std_logic;
+        nes_data_2: in std_logic;
         hsync, vsync: out  std_logic;
         rgb: out std_logic_vector(2 downto 0);
         speaker: out std_logic;
-        clk_out: out std_logic;
-        ps_control: out std_logic
+        nes_clk_out: out std_logic;
+        nes_ps_control: out std_logic
     );
 end plong;
 
@@ -70,9 +70,9 @@ begin
         entity work.controller(arch)
         port map(
             clk => clk, not_reset => not_reset,
-            data_in => data_1,
-            clk_out => clk_out,
-            ps_control => ps_control,
+            data_in => nes_data_1,
+            clk_out => nes_clk_out,
+            ps_control => nes_ps_control,
             gamepad(0) => open,    gamepad(1) => open,
             gamepad(2) => open,    gamepad(3) => nes1_start,
             gamepad(4) => nes1_up, gamepad(5) => nes1_down,
@@ -83,7 +83,7 @@ begin
         entity work.controller(arch)
         port map(
             clk => clk, not_reset => not_reset,
-            data_in => data_2,
+            data_in => nes_data_2,
             clk_out => open,
             ps_control => open,
             gamepad(0) => open,    gamepad(1) => open,

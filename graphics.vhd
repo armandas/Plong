@@ -407,7 +407,7 @@ begin
 
     font_unit:
         entity work.codepage_rom(content)
-        port map(clk => clk, addr => font_addr, data => font_data);
+        port map(addr => font_addr, data => font_data);
 
     ball_bounced <= ball_bounce;
     ball_missed <= ball_miss;
