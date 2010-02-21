@@ -4,7 +4,6 @@ use ieee.std_logic_unsigned.all;
 
 entity codepage_rom is
     port(
-        clk: in std_logic;
         addr: in std_logic_vector(8 downto 0);
         data: out std_logic_vector(0 to 7)
     );
@@ -555,14 +554,14 @@ architecture content of codepage_rom is
         "00111100", --   ####
         "00000000", --
         -- 60
+        "00100000", --   #
+        "00110000", --   ##
+        "00111000", --   ###
         "00111100", --   ####
-        "01000010", --  #    #
-        "10011001", -- #  ##  #
-        "10100001", -- # #    #
-        "10100001", -- # #    #
-        "10011001", -- #  ##  #
-        "01000010", --  #    #
-        "00111100", --   ####
+        "00111000", --   ###
+        "00110000", --   ##
+        "00100000", --   #
+        "00000000", --
         -- 61
         "00111100", --   ####
         "00001100", --     ##
@@ -591,15 +590,8 @@ architecture content of codepage_rom is
         "11111110", -- #######
         "00000000" --
     );
-    signal addr_reg: std_logic_vector(8 downto 0);
 begin
-    process(clk)
-    begin
-        if clk'event and clk = '1' then
-            addr_reg <= addr;
-        end if;
-    end process;            
-    data <= FONT(conv_integer(addr_reg));
+    data <= FONT(conv_integer(addr));
 end content;
 
 
